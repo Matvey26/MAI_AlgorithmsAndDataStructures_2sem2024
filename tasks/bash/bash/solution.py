@@ -1,7 +1,7 @@
 import argparse
 import os
 
-description = """Скрипт конкатенирует файлы наименьшего размера до тех пор, пока суммарный размер не превысит размеров блока файловой системы."""
+DESCRIPTION = """Скрипт конкатенирует файлы наименьшего размера до тех пор, пока суммарный размер не превысит размеров блока файловой системы."""
 
 
 def concatenate_files(output_path: str, input_path: str) -> int:
@@ -12,8 +12,8 @@ def concatenate_files(output_path: str, input_path: str) -> int:
     return os.path.getsize(output_path)
 
 
-def solve(output_path: str, source_dir: str, clear: bool) -> None:
-    size_of_block = os.statvfs('/').f_bsize
+def concatenate_files_until_block_size_limit(output_path: str, source_dir: str, is_need_clear: bool) -> None:
+    block_size = os.statvfs('/').f_bsize
 
     with open(output_path, 'w') as input_path:
         input_path.truncate()
@@ -33,10 +33,10 @@ def solve(output_path: str, source_dir: str, clear: bool) -> None:
         print(f"{output_path}: ", end='')
         print(f"{output_size} -> {new_output_path}")
 
-        if os.path.getsize(output_path) > size_of_block:
+        if os.path.getsize(output_path) > block_size:
             break
 
-    if clear:
+    if is_need_clear:
         print(f"Delete file {output_path} of size {os.path.getsize(output_path)}...")
         os.remove(output_path)
 
@@ -44,7 +44,7 @@ def solve(output_path: str, source_dir: str, clear: bool) -> None:
 def main():
     parser = argparse.ArgumentParser(
         prog='Concatenator3000',
-        description=description
+        description=DESCRIPTION
     )
 
     parser.add_argument(
@@ -76,7 +76,7 @@ def main():
         print("Введена несуществующая директория")
         return
 
-    solve(args.path, args.source_path, args.clear)
+    concatenate_files_until_block_size_limit(args.path, args.source_path, args.clear)
 
 
 if __name__ == '__main__':
