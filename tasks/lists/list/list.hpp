@@ -107,24 +107,11 @@ public:
         for (List<T>::ListIterator current = other.Begin(); current != other.End(); ++current) {
             PushBack(*current);
         }
+        size = other.size;
     }
 
     List& operator=(const List& other) {
-        // if (this == &other) {
-        //   return *this;
-        // }
-        // List<T>::ListIterator this_iterator = Begin();
-        // List<T>::ListIterator other_iterator = Begin();
-        // while (other_iterator != other.End()) {
-        //   if (this_iterator == End()) {
-        //     PushBack(*other_iterator);
-        //     ++other_iterator;
-        //   }
-        //   *this_iterator = *other_iterator;
-        //   ++this_iterator;
-        //   ++other_iterator;
-        // }
-        // return *this;
+        // Not implemented
     }
 
     ListIterator Begin() const noexcept {
@@ -142,55 +129,91 @@ public:
     }
 
     inline T& Back() const {
-        std::abort();  // Not implemented
+        return head->prev->data;
     }
 
     inline bool IsEmpty() const noexcept {
-        std::abort();  // Not implemented
+        return (size == 0);
     }
 
     inline size_t Size() const noexcept {
-        std::abort();  // Not implemented
+        return size;
     }
 
     void Swap(List& /*a*/) {
         // Not implemented
     }
 
-    ListIterator Find(const T& /*value*/) const {
-        std::abort();  // Not implemented
+    ListIterator Find(const T& value) const {
+        auto it = Begin();
+        for (; it != End(); ++it) {
+            if (*it == value) {
+                break;
+            }
+        }
+        return it;
     }
 
-    void Erase(ListIterator /*pos*/) {
-        // Not implemented
+    // HERE
+    void Erase(ListIterator pos) {
+        Node* node_to_del = pos.current;
+        node_to_del->prev->next = node_to_del->next;
+        node_to_del->next->prev = node_to_del->prev;
+        delete node_to_del;
     }
 
-    void Insert(ListIterator /*pos*/, const T& /*value*/) {
-        // Not implemented
+    void Insert(ListIterator pos, const T& value) {
+        Node* node_to_add = new Node();
+        node_to_add->data = value;
+        Node* current = pos.current;
+
+        node_to_add->prev = current->prev;
+        node_to_add->next = current;
+
+        current->prev->next = node_to_add;
+        current->prev = node_to_add;
     }
 
     void Clear() noexcept {
-        // Not implemented
+        for (size_t _ = 0; _ < size; ++_) {
+            PopBack();
+        }
     }
 
     void PushBack(const T& value) {
         Node* node_to_add = new Node();
         node_to_add->data = value;
+
         node_to_add->next = head;
+        node_to_add->prev = head->prev;
+
         head->prev->next = node_to_add;
         head->prev = node_to_add;
     }
 
-    void PushFront(const T& /*value*/) {
-        // Not implemented
+    void PushFront(const T& value) {
+        Node* node_to_add = new Node();
+        node_to_add->data = value;
+
+        node_to_add->prev = head;
+        node_to_add->next = head->next;
+
+        head->next->prev = node_to_add;
+        head->next = node_to_add;
     }
 
     void PopBack() {
-        // Not implemented
+        Node* node_to_del = head->prev;
+        node_to_del->prev->next = head;
+        head->prev = node_to_del->prev;
+        delete node_to_del;
     }
 
     void PopFront() {
-        // Not implemented
+        Node* node_to_del = head->next;
+        node_to_del->next->prev = head;
+        head->next = node_to_del->next;
+        delete node_to_del;
     }
 
     ~List() {
