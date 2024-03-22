@@ -19,17 +19,17 @@ private:
         friend class List;
 
     private:
-        Node() : data(new T) {
+        Node() : data_(new T) {
         }
-        Node(T value) : data(new T(value)) {
+        explicit Node(const T& value) : data_(new T(value)) {
         }
         ~Node() {
-            delete data;
+            delete data_;
         }
 
-        T* data;
-        Node* next;
-        Node* prev;
+        T* data_;
+        Node* next_;
+        Node* prev_;
     };
 
 public:
@@ -48,65 +48,60 @@ public:
         // NOLINTNEXTLINE
         using pointer = value_type*;
 
-        // ListIterator& operator=(ListIterator& other) {
-        //     current = other.current;
-        //     return *this;
-        // }
-
         inline bool operator==(const ListIterator& other) const {
-            return this->current == other.current;
+            return this->current_ == other.current_;
         };
 
         inline bool operator!=(const ListIterator& other) const {
-            return this->current != other.current;
+            return this->current_ != other.current_;
         };
 
         // *End() work incorrect (valgrind)
         inline reference operator*() const {
-            return *current->data;
+            return *current_->data_;
         };
 
         ListIterator& operator++() {
-            current = current->next;
+            current_ = current_->next_;
             return *this;
         };
 
         ListIterator operator++(int) {
             ListIterator copy = *this;
-            current = current->next;
+            current_ = current_->next_;
             return copy;
         };
 
         ListIterator& operator--() {
-            current = current->prev;
+            current_ = current_->prev_;
             return *this;
         };
 
         ListIterator operator--(int) {
             ListIterator copy = *this;
-            current = current->prev;
+            current_ = current_->prev_;
             return copy;
         };
 
         inline pointer operator->() const {
-            return current->data;
+            return current_->data_;
         };
 
     private:
-        ListIterator(Node* other_node) {
-            current = other_node;
+        explicit ListIterator(Node* other_node) {
+            current_ = other_node;
         }
-        ListIterator(const Node* other_node) {
-            current = other_node;
+        explicit ListIterator(const Node* other_node) {
+            current_ = other_node;
         }
 
     private:
-        Node* current;
+        Node* current_;
     };
 
 public:
-    List() : size(0), head(new Node()) {
-        head->next = head->prev = head;
+    List() : size_(0), head_(new Node()) {
+        head_->next_ = head_->prev_ = head_;
     }
 
     explicit List(size_t sz) : List() {
@@ -125,7 +120,7 @@ public:
         for (List<T>::ListIterator current = other.Begin(); current != other.End(); ++current) {
             PushBack(*current);
         }
-        size = other.size;
+        size_ = other.size_;
     }
 
     List& operator=(const List& other) {
@@ -135,34 +130,34 @@ public:
     }
 
     ListIterator Begin() const noexcept {
-        ListIterator begin_iterator(head->next);
+        ListIterator begin_iterator(head_->next_);
         return begin_iterator;
     }
 
     ListIterator End() const noexcept {
-        ListIterator end_iterator(head);
+        ListIterator end_iterator(head_);
         return end_iterator;
     }
 
     inline T& Front() const {
-        return *head->next->data;
+        return *head_->next_->data_;
     }
 
     inline T& Back() const {
-        return *head->prev->data;
+        return *head_->prev_->data_;
     }
 
     inline bool IsEmpty() const noexcept {
-        return (size == 0);
+        return (size_ == 0);
     }
 
     inline size_t Size() const noexcept {
-        return size;
+        return size_;
     }
 
     void Swap(List& other) {
-        std::swap(head, other.head);
-        std::swap(size, other.size);
+        std::swap(head_, other.head_);
+        std::swap(size_, other.size_);
     }
 
     ListIterator Find(const T& value) const {
@@ -176,67 +171,67 @@ public:
     }
 
     void Erase(ListIterator pos) {
-        Node* node_to_del = pos.current;
-        node_to_del->prev->next = node_to_del->next;
-        node_to_del->next->prev = node_to_del->prev;
-        --size;
+        Node* node_to_del = pos.current_;
+        node_to_del->prev_->next_ = node_to_del->next_;
+        node_to_del->next_->prev_ = node_to_del->prev_;
+        --size_;
         delete node_to_del;
     }
 
     void Insert(ListIterator pos, const T& value) {
         Node* node_to_add = new Node(value);
-        // node_to_add->data = value;
-        Node* current = pos.current;
+        // node_to_add->data_ = value;
+        Node* current = pos.current_;
 
-        node_to_add->prev = current->prev;
-        node_to_add->next = current;
+        node_to_add->prev_ = current->prev_;
+        node_to_add->next_ = current;
 
-        current->prev->next = node_to_add;
-        current->prev = node_to_add;
+        current->prev_->next_ = node_to_add;
+        current->prev_ = node_to_add;
 
-        ++size;
+        ++size_;
     }
 
     void Clear() noexcept {
-        while (size) {
+        while (size_) {
             PopBack();
         }
     }
 
     void PushBack(const T& value) {
         Node* node_to_add = new Node(value);
-        // node_to_add->data = value;
+        // node_to_add->data_ = value;
 
-        node_to_add->next = head;
-        node_to_add->prev = head->prev;
+        node_to_add->next_ = head_;
+        node_to_add->prev_ = head_->prev_;
 
-        head->prev->next = node_to_add;
-        head->prev = node_to_add;
+        head_->prev_->next_ = node_to_add;
+        head_->prev_ = node_to_add;
 
-        ++size;
+        ++size_;
     }
 
     void PushFront(const T& value) {
         Node* node_to_add = new Node(value);
-        // node_to_add->data = value;
+        // node_to_add->data_ = value;
 
-        node_to_add->prev = head;
-        node_to_add->next = head->next;
+        node_to_add->prev_ = head_;
+        node_to_add->next_ = head_->next_;
 
-        head->next->prev = node_to_add;
-        head->next = node_to_add;
+        head_->next_->prev_ = node_to_add;
+        head_->next_ = node_to_add;
 
-        ++size;
+        ++size_;
     }
 
     void PopBack() {
         if (IsEmpty()) {
             throw ListIsEmptyException("List is empty, can't pop last element.");
         }
-        Node* node_to_del = head->prev;
-        node_to_del->prev->next = head;
-        head->prev = node_to_del->prev;
-        --size;
+        Node* node_to_del = head_->prev_;
+        node_to_del->prev_->next_ = head_;
+        head_->prev_ = node_to_del->prev_;
+        --size_;
         delete node_to_del;
     }
 
@@ -244,27 +239,28 @@ public:
         if (IsEmpty()) {
             throw ListIsEmptyException("List is empty, can't pop first element.");
         }
-        Node* node_to_del = head->next;
-        node_to_del->next->prev = head;
-        head->next = node_to_del->next;
-        --size;
+        Node* node_to_del = head_->next_;
+        node_to_del->next_->prev_ = head_;
+        head_->next_ = node_to_del->next_;
+        --size_;
         delete node_to_del;
     }
 
     ~List() {
         Clear();
-        delete head;
+        delete head_;
     }
 
 private:
-    size_t size;
-    Node* head;
+    size_t size_;
+    Node* head_;
 };
 
 namespace std {
 // Global swap overloading
 template <typename T>
-void swap(List<T>& a, List<T>& b) {
+// NOLINTNEXTLINE
+void swap(List<T>& a, List<T>& b) {  // Здесь clippy просил, чтобы я функцию назвал с большой буквы
     a.Swap(b);
 }
 }  // namespace std
