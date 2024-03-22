@@ -19,7 +19,15 @@ private:
         friend class List;
 
     private:
-        T data;
+        Node() : data(new T) {
+        }
+        Node(T value) : data(new T(value)) {
+        }
+        ~Node() {
+            delete data;
+        }
+
+        T* data;
         Node* next;
         Node* prev;
     };
@@ -55,7 +63,7 @@ public:
 
         // *End() work incorrect (valgrind)
         inline reference operator*() const {
-            return current->data;
+            return *current->data;
         };
 
         ListIterator& operator++() {
@@ -81,7 +89,7 @@ public:
         };
 
         inline pointer operator->() const {
-            return &current->data;
+            return current->data;
         };
 
     private:
@@ -97,21 +105,19 @@ public:
     };
 
 public:
-    List() : size(0), head(new Node) {
+    List() : size(0), head(new Node()) {
         head->next = head->prev = head;
     }
 
     explicit List(size_t sz) : List() {
         for (size_t _ = 0; _ < sz; ++_) {
-            PushBack(0);
+            PushBack(T());
         }
-        size = sz;
     }
 
     List(const std::initializer_list<T>& values) : List() {
         for (T value : values) {
             PushBack(value);
-            ++size;
         }
     }
 
@@ -139,11 +145,11 @@ public:
     }
 
     inline T& Front() const {
-        return head->next->data;
+        return *head->next->data;
     }
 
     inline T& Back() const {
-        return head->prev->data;
+        return *head->prev->data;
     }
 
     inline bool IsEmpty() const noexcept {
@@ -173,12 +179,13 @@ public:
         Node* node_to_del = pos.current;
         node_to_del->prev->next = node_to_del->next;
         node_to_del->next->prev = node_to_del->prev;
+        --size;
         delete node_to_del;
     }
 
     void Insert(ListIterator pos, const T& value) {
-        Node* node_to_add = new Node();
-        node_to_add->data = value;
+        Node* node_to_add = new Node(value);
+        // node_to_add->data = value;
         Node* current = pos.current;
 
         node_to_add->prev = current->prev;
@@ -186,17 +193,19 @@ public:
 
         current->prev->next = node_to_add;
         current->prev = node_to_add;
+
+        ++size;
     }
 
     void Clear() noexcept {
-        for (size_t _ = 0; _ < size; ++_) {
+        while (size) {
             PopBack();
         }
     }
 
     void PushBack(const T& value) {
-        Node* node_to_add = new Node();
-        node_to_add->data = value;
+        Node* node_to_add = new Node(value);
+        // node_to_add->data = value;
 
         node_to_add->next = head;
         node_to_add->prev = head->prev;
@@ -208,8 +217,8 @@ public:
     }
 
     void PushFront(const T& value) {
-        Node* node_to_add = new Node();
-        node_to_add->data = value;
+        Node* node_to_add = new Node(value);
+        // node_to_add->data = value;
 
         node_to_add->prev = head;
         node_to_add->next = head->next;
