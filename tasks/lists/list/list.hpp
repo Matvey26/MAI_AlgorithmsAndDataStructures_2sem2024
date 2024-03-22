@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <utility>
 
@@ -26,11 +27,11 @@ public:
         friend class List;
 
     public:
+        using iterator_category = std::bidirectional_iterator_tag;
+        using difference_type = std::ptrdiff_t;
         using value_type = T;
         using reference_type = value_type&;
         using pointer_type = value_type*;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::bidirectional_iterator_tag;
 
         ListIterator& operator=(ListIterator&) = default;
 
@@ -42,6 +43,7 @@ public:
             return this->current != other.current;
         };
 
+        // *End() work incorrect (valgrind)
         inline reference_type operator*() const {
             return current->data;
         };
@@ -85,15 +87,15 @@ public:
     };
 
 public:
-    List() {
-        head = new Node();
+    List() : size(0), head(new Node) {
         head->next = head->prev = head;
-        size = 0;
     }
 
-    explicit List(size_t sz) : size(sz) {
-        head = new Node();
-        head.next = head.prev = head;
+    explicit List(size_t sz) : List() {
+        for (int _ = 0; _ < sz; ++_) {
+            PushBack(0);
+        }
+        size = sz;
     }
 
     List(const std::initializer_list<T>& values) : List() {
@@ -111,7 +113,9 @@ public:
     }
 
     List& operator=(const List& other) {
-        // Not implemented
+        List copy = other;
+        Swap(*this, copy);
+        return *this;
     }
 
     ListIterator Begin() const noexcept {
@@ -140,8 +144,9 @@ public:
         return size;
     }
 
-    void Swap(List& /*a*/) {
-        // Not implemented
+    void Swap(List& other) {
+        std::swap(head, other.head);
+        std::swap(size, other.size);
     }
 
     ListIterator Find(const T& value) const {
@@ -154,7 +159,6 @@ public:
         return it;
     }
 
-    // HERE
     void Erase(ListIterator pos) {
         Node* node_to_del = pos.current;
         node_to_del->prev->next = node_to_del->next;
@@ -217,12 +221,13 @@ public:
     }
 
     ~List() {
-        // Not implemented
+        Clear();
+        delete head;
     }
 
 private:
-    Node* head;
     size_t size;
+    Node* head;
 };
 
 namespace std {
