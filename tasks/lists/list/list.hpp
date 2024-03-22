@@ -7,6 +7,8 @@
 #include <iterator>
 #include <utility>
 
+#include "exceptions.hpp"
+
 // #include <fmt/core.h>
 
 template <typename T>
@@ -27,13 +29,21 @@ public:
         friend class List;
 
     public:
+        // NOLINTNEXTLINE
         using iterator_category = std::bidirectional_iterator_tag;
+        // NOLINTNEXTLINE
         using difference_type = std::ptrdiff_t;
+        // NOLINTNEXTLINE
         using value_type = T;
-        using reference_type = value_type&;
-        using pointer_type = value_type*;
+        // NOLINTNEXTLINE
+        using reference = value_type&;
+        // NOLINTNEXTLINE
+        using pointer = value_type*;
 
-        ListIterator& operator=(ListIterator&) = default;
+        // ListIterator& operator=(ListIterator& other) {
+        //     current = other.current;
+        //     return *this;
+        // }
 
         inline bool operator==(const ListIterator& other) const {
             return this->current == other.current;
@@ -44,7 +54,7 @@ public:
         };
 
         // *End() work incorrect (valgrind)
-        inline reference_type operator*() const {
+        inline reference operator*() const {
             return current->data;
         };
 
@@ -70,7 +80,7 @@ public:
             return copy;
         };
 
-        inline pointer_type operator->() const {
+        inline pointer operator->() const {
             return &current->data;
         };
 
@@ -92,7 +102,7 @@ public:
     }
 
     explicit List(size_t sz) : List() {
-        for (int _ = 0; _ < sz; ++_) {
+        for (size_t _ = 0; _ < sz; ++_) {
             PushBack(0);
         }
         size = sz;
@@ -114,7 +124,7 @@ public:
 
     List& operator=(const List& other) {
         List copy = other;
-        Swap(*this, copy);
+        Swap(copy);
         return *this;
     }
 
@@ -193,6 +203,8 @@ public:
 
         head->prev->next = node_to_add;
         head->prev = node_to_add;
+
+        ++size;
     }
 
     void PushFront(const T& value) {
@@ -204,19 +216,29 @@ public:
 
         head->next->prev = node_to_add;
         head->next = node_to_add;
+
+        ++size;
     }
 
     void PopBack() {
+        if (IsEmpty()) {
+            throw ListIsEmptyException("List is empty, can't pop last element.");
+        }
         Node* node_to_del = head->prev;
         node_to_del->prev->next = head;
         head->prev = node_to_del->prev;
+        --size;
         delete node_to_del;
     }
 
     void PopFront() {
+        if (IsEmpty()) {
+            throw ListIsEmptyException("List is empty, can't pop first element.");
+        }
         Node* node_to_del = head->next;
         node_to_del->next->prev = head;
         head->next = node_to_del->next;
+        --size;
         delete node_to_del;
     }
 
