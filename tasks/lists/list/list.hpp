@@ -19,15 +19,19 @@ private:
         friend class List;
 
     private:
-        Node() : data_(new T) {
-        }
-        explicit Node(const T& value) : data_(new T(value)) {
-        }
-        ~Node() {
-            delete data_;
+        Node() : data_() {
         }
 
-        T* data_;
+        explicit Node(const T& value) : data_(value) {
+        }
+
+        explicit Node(T&& value) : data_(std::move(value)) {
+        }
+
+        ~Node() {
+        }
+
+        T data_;
         Node* next_;
         Node* prev_;
     };
@@ -58,7 +62,7 @@ public:
 
         // *End() work incorrect (valgrind)
         inline reference operator*() const {
-            return *current_->data_;
+            return current_->data_;
         };
 
         ListIterator& operator++() {
@@ -84,7 +88,7 @@ public:
         };
 
         inline pointer operator->() const {
-            return current_->data_;
+            return &current_->data_;
         };
 
     private:
@@ -117,8 +121,8 @@ public:
     }
 
     List(const List& other) : List() {
-        for (List<T>::ListIterator current = other.Begin(); current != other.End(); ++current) {
-            PushBack(*current);
+        for (List<T>::ListIterator it = other.Begin(); it != other.End(); ++it) {
+            PushBack(*it);
         }
         size_ = other.size_;
     }
@@ -140,11 +144,11 @@ public:
     }
 
     inline T& Front() const {
-        return *head_->next_->data_;
+        return head_->next_->data_;
     }
 
     inline T& Back() const {
-        return *head_->prev_->data_;
+        return head_->prev_->data_;
     }
 
     inline bool IsEmpty() const noexcept {
@@ -180,7 +184,6 @@ public:
 
     void Insert(ListIterator pos, const T& value) {
         Node* node_to_add = new Node(value);
-        // node_to_add->data_ = value;
         Node* current = pos.current_;
 
         node_to_add->prev_ = current->prev_;
@@ -200,7 +203,18 @@ public:
 
     void PushBack(const T& value) {
         Node* node_to_add = new Node(value);
-        // node_to_add->data_ = value;
+
+        node_to_add->next_ = head_;
+        node_to_add->prev_ = head_->prev_;
+
+        head_->prev_->next_ = node_to_add;
+        head_->prev_ = node_to_add;
+
+        ++size_;
+    }
+
+    void PushBack(T&& value) {
+        Node* node_to_add = new Node(std::move(value));
 
         node_to_add->next_ = head_;
         node_to_add->prev_ = head_->prev_;
@@ -213,7 +227,18 @@ public:
 
     void PushFront(const T& value) {
         Node* node_to_add = new Node(value);
-        // node_to_add->data_ = value;
+
+        node_to_add->prev_ = head_;
+        node_to_add->next_ = head_->next_;
+
+        head_->next_->prev_ = node_to_add;
+        head_->next_ = node_to_add;
+
+        ++size_;
+    }
+
+    void PushFront(T&& value) {
+        Node* node_to_add = new Node(std::move(value));
 
         node_to_add->prev_ = head_;
         node_to_add->next_ = head_->next_;
