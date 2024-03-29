@@ -13,8 +13,6 @@
 
 template <typename T>
 class List {
-    friend int main();
-
 private:
     struct NodeBase {
         NodeBase* next_;
@@ -33,6 +31,20 @@ private:
         NodeHeader() noexcept {
             init();
         }
+
+        // copy ctor
+        NodeHeader(const NodeHeader& other) noexcept : NodeBase{other.next_, other.prev_}, sz_(other.sz_) {
+            if (other.base()->next_ == other.base()) {
+                this->next_ = this->prev_ = this;
+            } else {
+                this->next_->prev_ = this->prev_->next_ = this;
+            }
+        }
+
+        // void Swap(NodeHeader& other) {
+        //     std::swap(base()->next_, other.base().next_);
+        //     std::swap(base()->prev_, other.base().prev_);
+        // }
 
         // move ctor
         NodeHeader(NodeHeader&& other) noexcept : NodeBase{other.next_, other.prev_}, sz_(other.sz_) {
@@ -54,7 +66,7 @@ private:
     struct Node : public NodeBase {
         T data_;
 
-        Node(const T& value) : data_(value) {
+        explicit Node(const T& value) : data_(value) {
         }
     };
 
@@ -115,7 +127,7 @@ public:
     private:
         ListIterator() noexcept : current_() {
         }
-        explicit ListIterator(NodeBase* node) noexcept : current_(node) {
+        explicit ListIterator(const NodeBase* node) noexcept : current_(const_cast<NodeBase*>(node)) {
         }
         ListIterator ConstCast() const noexcept {
             return *this;
@@ -140,8 +152,10 @@ public:
         }
     }
 
-    List(const List& other) {
-        // Not implemented
+    List(const List& other) : List() {
+        for (auto it = other.Begin(); it != other.End(); ++it) {
+            PushBack(*it);
+        }
     }
 
     List& operator=(const List& other) {
@@ -150,24 +164,24 @@ public:
         return *this;
     }
 
-    ListIterator Begin() noexcept {
+    ListIterator Begin() const noexcept {
         return ListIterator(head_.next_);
     }
 
-    ListIterator End() noexcept {
+    ListIterator End() const noexcept {
         return ListIterator(&head_);
     }
 
     inline T& Front() const {
-        std::abort();  // Not implemented
+        return static_cast<Node*>(head_.next_)->data_;
     }
 
     inline T& Back() const {
-        std::abort();  // Not implemented
+        return static_cast<Node*>(head_.prev_)->data_;
     }
 
     inline bool IsEmpty() const noexcept {
-        std::abort();  // Not implemented
+        return head_.sz_ == 0;
     }
 
     inline size_t Size() const noexcept {
@@ -175,9 +189,15 @@ public:
     }
 
     void Swap(List& other) {
-        std::swap(head_.base()->prev_->next_, other.head_.base()->prev_->next_);
-        std::swap(head_.base()->next_->prev_, other.head_.base()->next_->prev_);
-        std::swap(head_, other.head_);
+        head_.prev_->next_ = &other.head_;
+        head_.next_->prev_ = &other.head_;
+        other.head_.prev_->next_ = &head_;
+        other.head_.next_->prev_ = &head_;
+        // std::swap(head_.base()->prev_->next_, other.head_.base()->prev_->next_);
+        // std::swap(head_.base()->next_->prev_, other.head_.base()->next_->prev_);
+        // std::swap(head_.base(), other.head_.base());
+        std::swap(head_.prev_, other.head_.prev_);
+        std::swap(head_.next_, other.head_.next_);
         std::swap(head_.sz_, other.head_.sz_);
     }
 
@@ -223,10 +243,16 @@ public:
     }
 
     void PopBack() {
+        if (IsEmpty()) {
+            throw ListIsEmptyException("List is empty");
+        }
         Erase(ListIterator(head_.prev_));
     }
 
     void PopFront() {
+        if (IsEmpty()) {
+            throw ListIsEmptyException("List is empty");
+        }
         Erase(Begin());
     }
 
