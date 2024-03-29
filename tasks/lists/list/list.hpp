@@ -19,45 +19,6 @@ private:
         NodeBase* prev_;
     };
 
-    struct NodeHeader : public NodeBase {
-        size_t sz_;
-
-        // Improves code readability.
-        NodeHeader* Base() {
-            return this;
-        }
-
-        // default ctor
-        NodeHeader() noexcept {
-            Init();
-        }
-
-        // copy ctor
-        NodeHeader(const NodeHeader& other) noexcept : NodeBase{other.next_, other.prev_}, sz_(other.sz_) {
-            if (other.Base()->next_ == other.Base()) {
-                this->next_ = this->prev_ = this;
-            } else {
-                this->next_->prev_ = this->prev_->next_ = this;
-            }
-        }
-
-        // move ctor
-        NodeHeader(NodeHeader&& other) noexcept : NodeBase{other.next_, other.prev_}, sz_(other.sz_) {
-            if (other.Base()->next_ == other.Base()) {
-                this->next_ = this->prev_ = this;
-            } else {
-                this->next_->prev_ = this->prev_->next_ = this;
-                other.Init();
-            }
-        }
-
-        // initializes (or resets) the node
-        void Init() {
-            this->next_ = this->prev_ = this;
-            sz_ = 0;
-        }
-    };
-
     struct Node : public NodeBase {
         T data_;
 
@@ -139,15 +100,17 @@ public:
     using ConstIterator = BaseIterator<true>;
 
 public:
-    List() = default;
+    List() : sz_(0) {
+        head_.next_ = head_.prev_ = &head_;
+    }
 
-    explicit List(size_t sz) {
+    explicit List(size_t sz) : List() {
         while (sz--) {
             PushBack(T());
         }
     }
 
-    List(const std::initializer_list<T>& values) {
+    List(const std::initializer_list<T>& values) : List() {
         for (auto value : values) {
             PushBack(value);
         }
@@ -173,11 +136,12 @@ public:
         return Iterator(&head_);
     }
 
-    inline ConstIterator Begin() const noexcept {
+    // Нужны для константых списков
+    ConstIterator Begin() const noexcept {
         return ConstIterator(head_.next_);
     }
 
-    inline ConstIterator End() const noexcept {
+    ConstIterator End() const noexcept {
         return ConstIterator(&head_);
     }
 
@@ -190,21 +154,21 @@ public:
     }
 
     inline bool IsEmpty() const noexcept {
-        return head_.sz_ == 0;
+        return sz_ == 0;
     }
 
     inline size_t Size() const noexcept {
-        return head_.sz_;
+        return sz_;
     }
 
     void Swap(List& other) {
-        head_.prev_->next_ = &other.head_;
-        head_.next_->prev_ = &other.head_;
-        other.head_.prev_->next_ = &head_;
-        other.head_.next_->prev_ = &head_;
+        std::swap(head_.prev_->next_, other.head_.prev_->next_);
+        std::swap(head_.next_->prev_, other.head_.next_->prev_);
+
         std::swap(head_.prev_, other.head_.prev_);
         std::swap(head_.next_, other.head_.next_);
-        std::swap(head_.sz_, other.head_.sz_);
+
+        std::swap(sz_, other.sz_);
     }
 
     Iterator Find(const T& value) {
@@ -221,7 +185,7 @@ public:
         Node* node_to_del = static_cast<Node*>(pos.current_);
         pos.current_->prev_->next_ = pos.current_->next_;
         pos.current_->next_->prev_ = pos.current_->prev_;
-        --head_.sz_;
+        --sz_;
         delete node_to_del;
     }
 
@@ -231,12 +195,12 @@ public:
         node_to_add->prev_ = pos.current_->prev_;
         pos.current_->prev_->next_ = static_cast<NodeBase*>(node_to_add);
         pos.current_->prev_ = static_cast<NodeBase*>(node_to_add);
-        ++head_.sz_;
+        ++sz_;
     }
 
     void Clear() noexcept {
-        while (head_.sz_) {
-            Erase(Begin());
+        while (sz_) {
+            PopBack();
         }
     }
 
@@ -267,7 +231,8 @@ public:
     }
 
 private:
-    NodeHeader head_;
+    size_t sz_;
+    NodeBase head_;
 };
 
 namespace std {
