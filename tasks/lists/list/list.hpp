@@ -162,13 +162,26 @@ public:
     }
 
     void Swap(List& other) {
-        std::swap(head_.prev_->next_, other.head_.prev_->next_);
-        std::swap(head_.next_->prev_, other.head_.next_->prev_);
+        // head_.prev_->next_ = &other.head_;
+        // head_.next_->prev_ = &other.head_;
+        // other.head_.prev_->next_ = &head_;
+        // other.head_.next_->prev_ = &head_;
 
         std::swap(head_.prev_, other.head_.prev_);
         std::swap(head_.next_, other.head_.next_);
-
         std::swap(sz_, other.sz_);
+
+        if (sz_ == 0) {
+            head_.next_ = head_.prev_ = &head_;
+        } else {
+            head_.next_->prev_ = head_.prev_->next_ = &head_;
+        }
+
+        if (other.sz_ == 0) {
+            other.head_.next_ = other.head_.prev_ = &other.head_;
+        } else {
+            other.head_.next_->prev_ = other.head_.prev_->next_ = &other.head_;
+        }
     }
 
     Iterator Find(const T& value) {
