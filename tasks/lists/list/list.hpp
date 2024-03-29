@@ -13,72 +13,88 @@
 
 template <typename T>
 class List {
-private:
-    class BaseNode {
-        friend class ListIterator;
-        friend class List;
+    friend int main();
 
-    private:
-        BaseNode* next_;
-        BaseNode* prev_;
+private:
+    struct NodeBase {
+        NodeBase* next_;
+        NodeBase* prev_;
     };
 
-    class Node : public BaseNode {
-        friend class ListIterator;
-        friend class List;
+    struct NodeHeader : public NodeBase {
+        size_t sz_;
 
-    private:
-        Node() = default;
-
-        explicit Node(const T& value) : data_(value) {
+        // Improves code readability.
+        NodeHeader* base() {
+            return this;
         }
 
-        explicit Node(T&& value) : data_(std::move(value)) {
+        // default ctor
+        NodeHeader() noexcept {
+            init();
         }
 
-        ~Node() = default;
+        // move ctor
+        NodeHeader(NodeHeader&& other) noexcept : NodeBase{other.next_, other.prev_}, sz_(other.sz_) {
+            if (other.base()->next_ == other.base()) {
+                this->next_ = this->prev_ = this;
+            } else {
+                this->next_->prev_ = this->prev_->next_ = this;
+                other.init();
+            }
+        }
 
+        // initializes (or resets) the node
+        void init() {
+            this->next_ = this->prev_ = this;
+            sz_ = 0;
+        }
+    };
+
+    struct Node : public NodeBase {
         T data_;
+
+        Node(const T& value) : data_(value) {
+        }
     };
 
 public:
     class ListIterator {
-        friend class List;
+        friend List;
 
     public:
         // NOLINTNEXTLINE
-        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = T;
+        // NOLINTNEXTLINE
+        using reference_type = value_type&;
+        // NOLINTNEXTLINE
+        using pointer_type = value_type*;
         // NOLINTNEXTLINE
         using difference_type = std::ptrdiff_t;
         // NOLINTNEXTLINE
-        using value_type = T;
-        // NOLINTNEXTLINE
-        using reference = value_type&;
-        // NOLINTNEXTLINE
-        using pointer = value_type*;
+        using iterator_category = std::bidirectional_iterator_tag;
 
         inline bool operator==(const ListIterator& other) const {
-            return this->current_ == other.current_;
+            return current_ == other.current_;
         };
 
         inline bool operator!=(const ListIterator& other) const {
-            return this->current_ != other.current_;
+            return current_ != other.current_;
         };
 
-        // *End() work incorrect (valgrind)
-        inline reference operator*() const {
+        inline reference_type operator*() const {
             return static_cast<Node*>(current_)->data_;
         };
 
-        ListIterator& operator++() {
+        ListIterator& operator++() noexcept {
             current_ = current_->next_;
             return *this;
         };
 
-        ListIterator operator++(int) {
-            ListIterator copy = *this;
+        ListIterator operator++(int) noexcept {
+            ListIterator temp = *this;
             current_ = current_->next_;
-            return copy;
+            return temp;
         };
 
         ListIterator& operator--() {
@@ -87,49 +103,45 @@ public:
         };
 
         ListIterator operator--(int) {
-            ListIterator copy = *this;
+            ListIterator temp = *this;
             current_ = current_->prev_;
-            return copy;
+            return temp;
         };
 
-        inline pointer operator->() const {
+        inline pointer_type operator->() const {
             return &static_cast<Node*>(current_)->data_;
         };
 
     private:
-        explicit ListIterator(BaseNode* other_node) {
-            current_ = other_node;
+        ListIterator() noexcept : current_() {
         }
-        explicit ListIterator(const BaseNode* other_node) {
-            current_ = other_node;
+        explicit ListIterator(NodeBase* node) noexcept : current_(node) {
+        }
+        ListIterator ConstCast() const noexcept {
+            return *this;
         }
 
     private:
-        BaseNode* current_;
+        NodeBase* current_;
     };
 
 public:
-    List() : size_(0), head_() {
-        head_.next_ = head_.prev_ = &head_;
-    }
+    List() = default;
 
-    explicit List(size_t sz) : List() {
-        for (size_t _ = 0; _ < sz; ++_) {
+    explicit List(size_t sz) {
+        while (sz--) {
             PushBack(T());
         }
     }
 
-    List(const std::initializer_list<T>& values) : List() {
-        for (T value : values) {
+    List(const std::initializer_list<T>& values) {
+        for (auto value : values) {
             PushBack(value);
         }
     }
 
-    List(const List& other) : List() {
-        for (List<T>::ListIterator it = other.Begin(); it != other.End(); ++it) {
-            PushBack(*it);
-        }
-        size_ = other.size_;
+    List(const List& other) {
+        // Not implemented
     }
 
     List& operator=(const List& other) {
@@ -138,39 +150,35 @@ public:
         return *this;
     }
 
-    ListIterator Begin() const noexcept {
-        ListIterator begin_iterator(head_.next_);
-        return begin_iterator;
+    ListIterator Begin() noexcept {
+        return ListIterator(head_.next_);
     }
 
-    ListIterator End() const noexcept {
-        ListIterator end_iterator(&head_);
-        return end_iterator;
+    ListIterator End() noexcept {
+        return ListIterator(&head_);
     }
 
     inline T& Front() const {
-        return static_cast<Node*>(head_.next_)->data_;
+        std::abort();  // Not implemented
     }
 
     inline T& Back() const {
-        return static_cast<Node*>(head_.prev_)->data_;
+        std::abort();  // Not implemented
     }
 
     inline bool IsEmpty() const noexcept {
-        return (size_ == 0);
+        std::abort();  // Not implemented
     }
 
     inline size_t Size() const noexcept {
-        return size_;
+        return head_.sz_;
     }
 
     void Swap(List& other) {
-        head_.prev_->next_ = &other.head_;
-        head_.next_->prev_ = &other.head_;
-        other.head_.prev_->next_ = &head_;
-        other.head_.next_->prev_ = &head_;
+        std::swap(head_.base()->prev_->next_, other.head_.base()->prev_->next_);
+        std::swap(head_.base()->next_->prev_, other.head_.base()->next_->prev_);
         std::swap(head_, other.head_);
-        std::swap(size_, other.size_);
+        std::swap(head_.sz_, other.head_.sz_);
     }
 
     ListIterator Find(const T& value) const {
@@ -185,99 +193,41 @@ public:
 
     void Erase(ListIterator pos) {
         Node* node_to_del = static_cast<Node*>(pos.current_);
-        node_to_del->prev_->next_ = node_to_del->next_;
-        node_to_del->next_->prev_ = node_to_del->prev_;
-        --size_;
+        pos.current_->prev_->next_ = pos.current_->next_;
+        pos.current_->next_->prev_ = pos.current_->prev_;
+        --head_.sz_;
         delete node_to_del;
     }
 
     void Insert(ListIterator pos, const T& value) {
-        BaseNode* node_to_add = static_cast<BaseNode*>(new Node(value));
-        BaseNode* current = pos.current_;
-
-        node_to_add->prev_ = current->prev_;
-        node_to_add->next_ = current;
-
-        current->prev_->next_ = node_to_add;
-        current->prev_ = node_to_add;
-
-        ++size_;
+        Node* node_to_add = new Node(value);
+        node_to_add->next_ = pos.current_;
+        node_to_add->prev_ = pos.current_->prev_;
+        pos.current_->prev_->next_ = static_cast<NodeBase*>(node_to_add);
+        pos.current_->prev_ = static_cast<NodeBase*>(node_to_add);
+        ++head_.sz_;
     }
 
     void Clear() noexcept {
-        while (size_) {
+        while (head_.sz_) {
             PopBack();
         }
     }
 
     void PushBack(const T& value) {
-        BaseNode* node_to_add = new Node(value);
-
-        node_to_add->next_ = &head_;
-        node_to_add->prev_ = head_.prev_;
-
-        head_.prev_->next_ = static_cast<BaseNode*>(node_to_add);
-        head_.prev_ = static_cast<BaseNode*>(node_to_add);
-
-        ++size_;
-    }
-
-    void PushBack(T&& value) {
-        Node* node_to_add = new Node(std::move(value));
-
-        node_to_add->next_ = &head_;
-        node_to_add->prev_ = head_.prev_;
-
-        head_.prev_->next_ = static_cast<BaseNode*>(node_to_add);
-        head_.prev_ = static_cast<BaseNode*>(node_to_add);
-
-        ++size_;
+        Insert(End(), value);
     }
 
     void PushFront(const T& value) {
-        Node* node_to_add = new Node(value);
-
-        node_to_add->prev_ = &head_;
-        node_to_add->next_ = head_.next_;
-
-        head_.next_->prev_ = static_cast<BaseNode*>(node_to_add);
-        head_.next_ = static_cast<BaseNode*>(node_to_add);
-
-        ++size_;
-    }
-
-    void PushFront(T&& value) {
-        Node* node_to_add = new Node(std::move(value));
-
-        node_to_add->prev_ = &head_;
-        node_to_add->next_ = head_.next_;
-
-        head_.next_->prev_ = static_cast<BaseNode*>(node_to_add);
-        head_.next_ = static_cast<BaseNode*>(node_to_add);
-
-        ++size_;
+        Insert(Begin(), value);
     }
 
     void PopBack() {
-        if (IsEmpty()) {
-            throw ListIsEmptyException("List is empty, can't pop last element.");
-        }
-        Node* node_to_del = static_cast<Node*>(head_.prev_);
-        node_to_del->prev_->next_ = &head_;
-        head_.prev_ = node_to_del->prev_;
-        --size_;
-        delete node_to_del;
+        Erase(ListIterator(head_.prev_));
     }
 
     void PopFront() {
-        if (IsEmpty()) {
-            throw ListIsEmptyException("List is empty, can't pop first element.");
-        }
-        Node* node_to_del = static_cast<Node*>(head_.next_);
-        node_to_del->next_->prev_ = &head_;
-        head_.next_ = node_to_del->next_;
-        --size_;
-        delete node_to_del;
+        Erase(Begin());
     }
 
     ~List() {
@@ -285,15 +235,14 @@ public:
     }
 
 private:
-    size_t size_;
-    mutable BaseNode head_;
+    NodeHeader head_;
 };
 
 namespace std {
 // Global swap overloading
 template <typename T>
 // NOLINTNEXTLINE
-void swap(List<T>& a, List<T>& b) {  // Здесь clippy просил, чтобы я функцию назвал с большой буквы
+void swap(List<T>& a, List<T>& b) {
     a.Swap(b);
 }
 }  // namespace std
