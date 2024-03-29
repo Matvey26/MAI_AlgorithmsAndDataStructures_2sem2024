@@ -14,13 +14,21 @@
 template <typename T>
 class List {
 private:
-    class Node {
+    class BaseNode {
         friend class ListIterator;
         friend class List;
 
     private:
-        Node() : data_() {
-        }
+        BaseNode* next_;
+        BaseNode* prev_;
+    };
+
+    class Node : public BaseNode {
+        friend class ListIterator;
+        friend class List;
+
+    private:
+        Node() = default;
 
         explicit Node(const T& value) : data_(value) {
         }
@@ -28,12 +36,9 @@ private:
         explicit Node(T&& value) : data_(std::move(value)) {
         }
 
-        ~Node() {
-        }
+        ~Node() = default;
 
         T data_;
-        Node* next_;
-        Node* prev_;
     };
 
 public:
@@ -62,7 +67,7 @@ public:
 
         // *End() work incorrect (valgrind)
         inline reference operator*() const {
-            return current_->data_;
+            return static_cast<Node*>(current_)->data_;
         };
 
         ListIterator& operator++() {
@@ -88,24 +93,24 @@ public:
         };
 
         inline pointer operator->() const {
-            return &current_->data_;
+            return &static_cast<Node*>(current_)->data_;
         };
 
     private:
-        explicit ListIterator(Node* other_node) {
+        explicit ListIterator(BaseNode* other_node) {
             current_ = other_node;
         }
-        explicit ListIterator(const Node* other_node) {
+        explicit ListIterator(const BaseNode* other_node) {
             current_ = other_node;
         }
 
     private:
-        Node* current_;
+        BaseNode* current_;
     };
 
 public:
-    List() : size_(0), head_(new Node()) {
-        head_->next_ = head_->prev_ = head_;
+    List() : size_(0), head_() {
+        head_.next_ = head_.prev_ = &head_;
     }
 
     explicit List(size_t sz) : List() {
@@ -134,21 +139,21 @@ public:
     }
 
     ListIterator Begin() const noexcept {
-        ListIterator begin_iterator(head_->next_);
+        ListIterator begin_iterator(head_.next_);
         return begin_iterator;
     }
 
     ListIterator End() const noexcept {
-        ListIterator end_iterator(head_);
+        ListIterator end_iterator(&head_);
         return end_iterator;
     }
 
     inline T& Front() const {
-        return head_->next_->data_;
+        return static_cast<Node*>(head_.next_)->data_;
     }
 
     inline T& Back() const {
-        return head_->prev_->data_;
+        return static_cast<Node*>(head_.prev_)->data_;
     }
 
     inline bool IsEmpty() const noexcept {
@@ -160,6 +165,10 @@ public:
     }
 
     void Swap(List& other) {
+        head_.prev_->next_ = &other.head_;
+        head_.next_->prev_ = &other.head_;
+        other.head_.prev_->next_ = &head_;
+        other.head_.next_->prev_ = &head_;
         std::swap(head_, other.head_);
         std::swap(size_, other.size_);
     }
@@ -175,7 +184,7 @@ public:
     }
 
     void Erase(ListIterator pos) {
-        Node* node_to_del = pos.current_;
+        Node* node_to_del = static_cast<Node*>(pos.current_);
         node_to_del->prev_->next_ = node_to_del->next_;
         node_to_del->next_->prev_ = node_to_del->prev_;
         --size_;
@@ -183,8 +192,8 @@ public:
     }
 
     void Insert(ListIterator pos, const T& value) {
-        Node* node_to_add = new Node(value);
-        Node* current = pos.current_;
+        BaseNode* node_to_add = static_cast<BaseNode*>(new Node(value));
+        BaseNode* current = pos.current_;
 
         node_to_add->prev_ = current->prev_;
         node_to_add->next_ = current;
@@ -202,13 +211,13 @@ public:
     }
 
     void PushBack(const T& value) {
-        Node* node_to_add = new Node(value);
+        BaseNode* node_to_add = new Node(value);
 
-        node_to_add->next_ = head_;
-        node_to_add->prev_ = head_->prev_;
+        node_to_add->next_ = &head_;
+        node_to_add->prev_ = head_.prev_;
 
-        head_->prev_->next_ = node_to_add;
-        head_->prev_ = node_to_add;
+        head_.prev_->next_ = static_cast<BaseNode*>(node_to_add);
+        head_.prev_ = static_cast<BaseNode*>(node_to_add);
 
         ++size_;
     }
@@ -216,11 +225,11 @@ public:
     void PushBack(T&& value) {
         Node* node_to_add = new Node(std::move(value));
 
-        node_to_add->next_ = head_;
-        node_to_add->prev_ = head_->prev_;
+        node_to_add->next_ = &head_;
+        node_to_add->prev_ = head_.prev_;
 
-        head_->prev_->next_ = node_to_add;
-        head_->prev_ = node_to_add;
+        head_.prev_->next_ = static_cast<BaseNode*>(node_to_add);
+        head_.prev_ = static_cast<BaseNode*>(node_to_add);
 
         ++size_;
     }
@@ -228,11 +237,11 @@ public:
     void PushFront(const T& value) {
         Node* node_to_add = new Node(value);
 
-        node_to_add->prev_ = head_;
-        node_to_add->next_ = head_->next_;
+        node_to_add->prev_ = &head_;
+        node_to_add->next_ = head_.next_;
 
-        head_->next_->prev_ = node_to_add;
-        head_->next_ = node_to_add;
+        head_.next_->prev_ = static_cast<BaseNode*>(node_to_add);
+        head_.next_ = static_cast<BaseNode*>(node_to_add);
 
         ++size_;
     }
@@ -240,11 +249,11 @@ public:
     void PushFront(T&& value) {
         Node* node_to_add = new Node(std::move(value));
 
-        node_to_add->prev_ = head_;
-        node_to_add->next_ = head_->next_;
+        node_to_add->prev_ = &head_;
+        node_to_add->next_ = head_.next_;
 
-        head_->next_->prev_ = node_to_add;
-        head_->next_ = node_to_add;
+        head_.next_->prev_ = static_cast<BaseNode*>(node_to_add);
+        head_.next_ = static_cast<BaseNode*>(node_to_add);
 
         ++size_;
     }
@@ -253,9 +262,9 @@ public:
         if (IsEmpty()) {
             throw ListIsEmptyException("List is empty, can't pop last element.");
         }
-        Node* node_to_del = head_->prev_;
-        node_to_del->prev_->next_ = head_;
-        head_->prev_ = node_to_del->prev_;
+        Node* node_to_del = static_cast<Node*>(head_.prev_);
+        node_to_del->prev_->next_ = &head_;
+        head_.prev_ = node_to_del->prev_;
         --size_;
         delete node_to_del;
     }
@@ -264,21 +273,20 @@ public:
         if (IsEmpty()) {
             throw ListIsEmptyException("List is empty, can't pop first element.");
         }
-        Node* node_to_del = head_->next_;
-        node_to_del->next_->prev_ = head_;
-        head_->next_ = node_to_del->next_;
+        Node* node_to_del = static_cast<Node*>(head_.next_);
+        node_to_del->next_->prev_ = &head_;
+        head_.next_ = node_to_del->next_;
         --size_;
         delete node_to_del;
     }
 
     ~List() {
         Clear();
-        delete head_;
     }
 
 private:
     size_t size_;
-    Node* head_;
+    mutable BaseNode head_;
 };
 
 namespace std {
