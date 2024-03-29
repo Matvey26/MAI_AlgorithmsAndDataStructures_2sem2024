@@ -23,41 +23,36 @@ private:
         size_t sz_;
 
         // Improves code readability.
-        NodeHeader* base() {
+        NodeHeader* Base() {
             return this;
         }
 
         // default ctor
         NodeHeader() noexcept {
-            init();
+            Init();
         }
 
         // copy ctor
         NodeHeader(const NodeHeader& other) noexcept : NodeBase{other.next_, other.prev_}, sz_(other.sz_) {
-            if (other.base()->next_ == other.base()) {
+            if (other.Base()->next_ == other.Base()) {
                 this->next_ = this->prev_ = this;
             } else {
                 this->next_->prev_ = this->prev_->next_ = this;
             }
         }
 
-        // void Swap(NodeHeader& other) {
-        //     std::swap(base()->next_, other.base().next_);
-        //     std::swap(base()->prev_, other.base().prev_);
-        // }
-
         // move ctor
         NodeHeader(NodeHeader&& other) noexcept : NodeBase{other.next_, other.prev_}, sz_(other.sz_) {
-            if (other.base()->next_ == other.base()) {
+            if (other.Base()->next_ == other.Base()) {
                 this->next_ = this->prev_ = this;
             } else {
                 this->next_->prev_ = this->prev_->next_ = this;
-                other.init();
+                other.Init();
             }
         }
 
         // initializes (or resets) the node
-        void init() {
+        void Init() {
             this->next_ = this->prev_ = this;
             sz_ = 0;
         }
@@ -207,9 +202,6 @@ public:
         head_.next_->prev_ = &other.head_;
         other.head_.prev_->next_ = &head_;
         other.head_.next_->prev_ = &head_;
-        // std::swap(head_.base()->prev_->next_, other.head_.base()->prev_->next_);
-        // std::swap(head_.base()->next_->prev_, other.head_.base()->next_->prev_);
-        // std::swap(head_.base(), other.head_.base());
         std::swap(head_.prev_, other.head_.prev_);
         std::swap(head_.next_, other.head_.next_);
         std::swap(head_.sz_, other.head_.sz_);
