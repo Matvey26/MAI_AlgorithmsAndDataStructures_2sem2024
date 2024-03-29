@@ -70,72 +70,78 @@ private:
         }
     };
 
-public:
-    class ListIterator {
+private:
+    template <bool IsConst>
+    class BaseIterator {
         friend List;
 
     public:
         // NOLINTNEXTLINE
+        using basenode_ptr_type = std::conditional_t<IsConst, const NodeBase*, NodeBase*>;
+        // NOLINTNEXTLINE
+        using node_ptr_type = std::conditional_t<IsConst, const Node*, Node*>;
+        // NOLINTNEXTLINE
         using value_type = T;
         // NOLINTNEXTLINE
-        using reference_type = value_type&;
+        using reference_type = std::conditional_t<IsConst, const T&, T&>;
         // NOLINTNEXTLINE
-        using pointer_type = value_type*;
+        using pointer_type = std::conditional_t<IsConst, const T*, T*>;
         // NOLINTNEXTLINE
         using difference_type = std::ptrdiff_t;
         // NOLINTNEXTLINE
         using iterator_category = std::bidirectional_iterator_tag;
 
-        inline bool operator==(const ListIterator& other) const {
+        inline bool operator==(const BaseIterator& other) const {
             return current_ == other.current_;
         };
 
-        inline bool operator!=(const ListIterator& other) const {
+        inline bool operator!=(const BaseIterator& other) const {
             return current_ != other.current_;
         };
 
         inline reference_type operator*() const {
-            return static_cast<Node*>(current_)->data_;
+            return static_cast<node_ptr_type>(current_)->data_;
         };
 
-        ListIterator& operator++() noexcept {
+        BaseIterator& operator++() noexcept {
             current_ = current_->next_;
             return *this;
         };
 
-        ListIterator operator++(int) noexcept {
-            ListIterator temp = *this;
+        BaseIterator operator++(int) noexcept {
+            BaseIterator temp = *this;
             current_ = current_->next_;
             return temp;
         };
 
-        ListIterator& operator--() {
+        BaseIterator& operator--() {
             current_ = current_->prev_;
             return *this;
         };
 
-        ListIterator operator--(int) {
-            ListIterator temp = *this;
+        BaseIterator operator--(int) {
+            BaseIterator temp = *this;
             current_ = current_->prev_;
             return temp;
         };
 
         inline pointer_type operator->() const {
-            return &static_cast<Node*>(current_)->data_;
+            return &static_cast<node_ptr_type>(current_)->data_;
         };
 
     private:
-        ListIterator() noexcept : current_() {
+        BaseIterator() noexcept : current_() {
         }
-        explicit ListIterator(const NodeBase* node) noexcept : current_(const_cast<NodeBase*>(node)) {
-        }
-        ListIterator ConstCast() const noexcept {
-            return *this;
+        explicit BaseIterator(basenode_ptr_type node) noexcept : current_(node) {
         }
 
     private:
-        NodeBase* current_;
+        basenode_ptr_type current_;
     };
+
+public:
+    using Iterator = BaseIterator<false>;
+    using ConstIterator = BaseIterator<true>;
 
 public:
     List() = default;
@@ -164,12 +170,20 @@ public:
         return *this;
     }
 
-    ListIterator Begin() const noexcept {
-        return ListIterator(head_.next_);
+    Iterator Begin() noexcept {
+        return Iterator(head_.next_);
     }
 
-    ListIterator End() const noexcept {
-        return ListIterator(&head_);
+    Iterator End() noexcept {
+        return Iterator(&head_);
+    }
+
+    inline ConstIterator Begin() const noexcept {
+        return ConstIterator(head_.next_);
+    }
+
+    inline ConstIterator End() const noexcept {
+        return ConstIterator(&head_);
     }
 
     inline T& Front() const {
@@ -201,7 +215,7 @@ public:
         std::swap(head_.sz_, other.head_.sz_);
     }
 
-    ListIterator Find(const T& value) const {
+    Iterator Find(const T& value) {
         auto it = Begin();
         for (; it != End(); ++it) {
             if (*it == value) {
@@ -211,7 +225,7 @@ public:
         return it;
     }
 
-    void Erase(ListIterator pos) {
+    void Erase(Iterator pos) {
         Node* node_to_del = static_cast<Node*>(pos.current_);
         pos.current_->prev_->next_ = pos.current_->next_;
         pos.current_->next_->prev_ = pos.current_->prev_;
@@ -219,7 +233,7 @@ public:
         delete node_to_del;
     }
 
-    void Insert(ListIterator pos, const T& value) {
+    void Insert(Iterator pos, const T& value) {
         Node* node_to_add = new Node(value);
         node_to_add->next_ = pos.current_;
         node_to_add->prev_ = pos.current_->prev_;
@@ -230,7 +244,7 @@ public:
 
     void Clear() noexcept {
         while (head_.sz_) {
-            PopBack();
+            Erase(Begin());
         }
     }
 
@@ -246,7 +260,7 @@ public:
         if (IsEmpty()) {
             throw ListIsEmptyException("List is empty");
         }
-        Erase(ListIterator(head_.prev_));
+        Erase(Iterator(head_.prev_));
     }
 
     void PopFront() {
