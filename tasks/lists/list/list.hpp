@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fmt/core.h>
+
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
@@ -8,8 +10,6 @@
 #include <utility>
 
 #include "exceptions.hpp"
-
-// #include <fmt/core.h>
 
 template <typename T>
 class List {
@@ -162,11 +162,6 @@ public:
     }
 
     void Swap(List& other) {
-        // head_.prev_->next_ = &other.head_;
-        // head_.next_->prev_ = &other.head_;
-        // other.head_.prev_->next_ = &head_;
-        // other.head_.next_->prev_ = &head_;
-
         std::swap(head_.prev_, other.head_.prev_);
         std::swap(head_.next_, other.head_.next_);
         std::swap(sz_, other.sz_);
