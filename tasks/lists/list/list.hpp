@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fmt/core.h>
+// #include <fmt/core.h>
 
 #include <cstddef>
 #include <cstdlib>
@@ -48,41 +48,41 @@ private:
         using iterator_category = std::bidirectional_iterator_tag;
 
         inline bool operator==(const BaseIterator& other) const {
-            return current_ == other.current_;
+            return this->current_ == other.current_;
         };
 
         inline bool operator!=(const BaseIterator& other) const {
-            return current_ != other.current_;
+            return this->current_ != other.current_;
         };
 
         inline reference_type operator*() const {
-            return static_cast<node_ptr_type>(current_)->data_;
+            return static_cast<node_ptr_type>(this->current_)->data_;
         };
 
         BaseIterator& operator++() noexcept {
-            current_ = current_->next_;
+            this->current_ = this->current_->next_;
             return *this;
         };
 
         BaseIterator operator++(int) noexcept {
             BaseIterator temp = *this;
-            current_ = current_->next_;
+            this->current_ = this->current_->next_;
             return temp;
         };
 
         BaseIterator& operator--() {
-            current_ = current_->prev_;
+            this->current_ = this->current_->prev_;
             return *this;
         };
 
         BaseIterator operator--(int) {
             BaseIterator temp = *this;
-            current_ = current_->prev_;
+            this->current_ = this->current_->prev_;
             return temp;
         };
 
         inline pointer_type operator->() const {
-            return &static_cast<node_ptr_type>(current_)->data_;
+            return &static_cast<node_ptr_type>(this->current_)->data_;
         };
 
     private:
@@ -101,75 +101,77 @@ public:
 
 public:
     List() : sz_(0) {
-        head_.next_ = head_.prev_ = &head_;
+        this->head_.next_ = this->head_.prev_ = &this->head_;
     }
 
     explicit List(size_t sz) : List() {
         while (sz--) {
-            PushBack(T());
+            this->PushBack(T());
         }
     }
 
     List(const std::initializer_list<T>& values) : List() {
         for (auto value : values) {
-            PushBack(value);
+            this->PushBack(value);
         }
     }
 
     List(const List& other) : List() {
         for (auto it = other.Begin(); it != other.End(); ++it) {
-            PushBack(*it);
+            this->PushBack(*it);
         }
     }
 
     List& operator=(const List& other) {
-        List copy = other;
-        Swap(copy);
+        if (this != &other) {
+            List copy = other;
+            this->Swap(copy);
+        }
         return *this;
     }
 
     Iterator Begin() noexcept {
-        return Iterator(head_.next_);
+        return Iterator(this->head_.next_);
     }
 
     Iterator End() noexcept {
-        return Iterator(&head_);
+        return Iterator(&this->head_);
     }
 
     // Нужны для константых списков
     ConstIterator Begin() const noexcept {
-        return ConstIterator(head_.next_);
+        return ConstIterator(this->head_.next_);
     }
 
     ConstIterator End() const noexcept {
-        return ConstIterator(&head_);
+        return ConstIterator(&this->head_);
     }
 
     inline T& Front() const {
-        return static_cast<Node*>(head_.next_)->data_;
+        return static_cast<Node*>(this->head_.next_)->data_;
     }
 
     inline T& Back() const {
-        return static_cast<Node*>(head_.prev_)->data_;
+        return static_cast<Node*>(this->head_.prev_)->data_;
     }
 
     inline bool IsEmpty() const noexcept {
-        return sz_ == 0;
+        return this->sz_ == 0;
     }
 
     inline size_t Size() const noexcept {
-        return sz_;
+        return this->sz_;
     }
 
     void Swap(List& other) {
-        std::swap(head_.prev_, other.head_.prev_);
-        std::swap(head_.next_, other.head_.next_);
-        std::swap(sz_, other.sz_);
+        std::swap(this->head_.prev_, other.head_.prev_);
+        std::swap(this->head_.next_, other.head_.next_);
+        std::swap(this->sz_, other.sz_);
 
-        if (sz_ == 0) {
-            head_.next_ = head_.prev_ = &head_;
+        if (this->sz_ == 0) {
+            this->head_.next_ = this->head_.prev_ = &this->head_;
         } else {
-            head_.next_->prev_ = head_.prev_->next_ = &head_;
+            this->head_.next_->prev_ = this->head_.prev_->next_ = &head_;
         }
 
         if (other.sz_ == 0) {
@@ -180,8 +182,8 @@ public:
     }
 
     Iterator Find(const T& value) {
-        auto it = Begin();
-        for (; it != End(); ++it) {
+        auto it = this->Begin();
+        for (; it != this->End(); ++it) {
             if (*it == value) {
                 break;
             }
@@ -193,7 +195,7 @@ public:
         Node* node_to_del = static_cast<Node*>(pos.current_);
         pos.current_->prev_->next_ = pos.current_->next_;
         pos.current_->next_->prev_ = pos.current_->prev_;
-        --sz_;
+        --this->sz_;
         delete node_to_del;
     }
 
@@ -203,39 +205,39 @@ public:
         node_to_add->prev_ = pos.current_->prev_;
         pos.current_->prev_->next_ = static_cast<NodeBase*>(node_to_add);
         pos.current_->prev_ = static_cast<NodeBase*>(node_to_add);
-        ++sz_;
+        ++this->sz_;
     }
 
     void Clear() noexcept {
-        while (sz_) {
-            PopBack();
+        while (this->sz_) {
+            this->PopBack();
         }
     }
 
     void PushBack(const T& value) {
-        Insert(End(), value);
+        this->Insert(this->End(), value);
     }
 
     void PushFront(const T& value) {
-        Insert(Begin(), value);
+        this->Insert(this->Begin(), value);
     }
 
     void PopBack() {
-        if (IsEmpty()) {
-            throw ListIsEmptyException("List is empty");
+        if (this->IsEmpty()) {
+            throw ListIsEmptyException("List is empty, you can't delete last element from him");
         }
-        Erase(Iterator(head_.prev_));
+        this->Erase(Iterator(this->head_.prev_));
     }
 
     void PopFront() {
-        if (IsEmpty()) {
-            throw ListIsEmptyException("List is empty");
+        if (this->IsEmpty()) {
+            throw ListIsEmptyException("List is empty, you can't delete first element from him");
         }
-        Erase(Begin());
+        this->Erase(this->Begin());
     }
 
     ~List() {
-        Clear();
+        this->Clear();
     }
 
 private:
