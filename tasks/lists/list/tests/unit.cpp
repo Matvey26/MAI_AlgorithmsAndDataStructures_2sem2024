@@ -72,14 +72,14 @@ TEST(EmptyListTest, PopBackEmptyList) {
   List<int> list;
   EXPECT_THROW({
     list.PopBack();
-  }, std::runtime_error);
+  }, ListIsEmptyException);
 }
 
 TEST(EmptyListTest, PopFrontEmptyList) {
   List<int> list;
   EXPECT_THROW({
     list.PopFront();
-  }, std::runtime_error);
+  }, ListIsEmptyException);
 }
 
 TEST(EmptyListTest, ConstructorSizeDefaultValues) {
@@ -122,6 +122,26 @@ TEST(EmptyListTest, Swap) {
   ASSERT_EQ(list.Back(), 14);
 }
 
+TEST(EmptyListTest, PopBackOneElement) {
+  List<int> lst;
+  lst.PushBack(1);
+  lst.PopBack();
+  lst.PushBack(1);
+  lst.PopFront();
+
+  ASSERT_TRUE(lst.IsEmpty());
+}
+
+TEST(EmptyListTest, PopFrontOneElement) {
+  List<int> lst;
+  lst.PushBack(1);
+  lst.PopFront();
+  lst.PushBack(1);
+  lst.PopFront();
+
+  ASSERT_TRUE(lst.IsEmpty());
+}
+
 TEST_F(ListTest, CopyConstructor) {
   List<int> lst = list;
   ASSERT_NE(&list, &lst) << "Copy constructor must do copy!\n";
@@ -129,7 +149,6 @@ TEST_F(ListTest, CopyConstructor) {
   while (!lst.IsEmpty()) {
     ASSERT_EQ(list.Front(), lst.Front());
     list.PopFront();
-    ASSERT_NE(list.Front(), lst.Front());
     lst.PopFront();
   }
 }
@@ -152,7 +171,7 @@ TEST_F(ListTest, SelfAssignment) {
     list = list;
   });
   auto future = std::async(std::launch::async, &std::thread::join, &thread);
-  ASSERT_EQ(
+  ASSERT_LT(
     future.wait_for(std::chrono::seconds(1)),
     std::future_status::timeout
   ) << "There is infinity loop!\n";
@@ -180,7 +199,9 @@ TEST_F(ListTest, ReverseRangeWithIteratorPreFix) {
   ASSERT_EQ(std::distance(list.Begin(), list.End()), sz) << 
                 "Distanse between begin and end iterators ins't equal size";
   int iter = sz;
-  for (auto it = list.End(); it != list.Begin(); --it) {
+  auto it = list.End();
+  for (size_t i = sz; i > 0; --i) {
+    --it;
     ASSERT_EQ(*it, iter--);
   }
 }
@@ -188,8 +209,10 @@ TEST_F(ListTest, ReverseRangeWithIteratorPreFix) {
 TEST_F(ListTest, ReverseRangeWithIteratorPostFix) {
   ASSERT_EQ(std::distance(list.Begin(), list.End()), sz) << 
                 "Distanse between begin and end iterators ins't equal size";
+  auto it = list.End();
   int iter = sz;
-  for (auto it = list.End(); it != list.Begin(); it--) {
+  for (size_t i = sz; i > 0; --i) {
+    it--;
     ASSERT_EQ(*it, iter--);
   }
 }
