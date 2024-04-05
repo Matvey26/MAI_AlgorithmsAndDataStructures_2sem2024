@@ -28,7 +28,7 @@ TEST(EmptyListTest, DefaultConstructor) {
   ASSERT_TRUE(list.IsEmpty()) << "Default list isn't empty!";
 }
 
-// ASDF
+// Непримечательный комменатрий. Я просто пытаюсь заставить клиппи самостоятельно загрузить изменения.
 
 TEST(EmptyListTest, PushFrontSimple) {
   ForwardList<int> list;
