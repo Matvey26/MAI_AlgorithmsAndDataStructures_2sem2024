@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fmt/core.h>
+#include <fmt/core.h>`
 
 #include <cstdlib>
 #include <functional>
@@ -9,7 +9,8 @@
 
 #include "exceptions.hpp"
 
-template <typename U, typename V, typename Compare = std::less<U>>
+template <typename U, typename V, typename Compare = std::less<U>,
+          typename Alloc = std::allocator<std::pair<const U, V>>>
 class Map {
 public:
     // NOLINTNEXTLINE
@@ -37,11 +38,15 @@ public:
     Map() : sz_(0), head_(nullptr) {
     }
 
+    explicit Map(const Alloc& a) : sz_(0), head_(nullptr), alloc_(a) {
+    }
+
     value_type& operator[](const key_type& key) {
         if (this->sz_ == 0) {
-            this->head_ = new Node(key);
             ++this->sz_;
-            return head_->value;
+            this->head_ = alloc_.allocate(1);
+            std::allocator_traits<node_allocator>::construct(alloc_, this->head_, key);
+            return this->head_->value;
         }
         return this->Find(this->head_, key)->value;
     }
@@ -62,6 +67,7 @@ public:
         std::swap(this->sz_, other.sz_);
     }
 
+private:
     void InOrder(Node* u, std::vector<std::pair<key_type, value_type>>& values, bool is_increase) const {
         if (u == nullptr) {
             return;
@@ -77,17 +83,11 @@ public:
         }
     }
 
-    std::vector<std::pair<key_type, value_type>> Values(bool is_increase = true) const noexcept {
-        std::vector<std::pair<key_type, value_type>> answer;
-        this->InOrder(this->head_, answer, is_increase);
-        return answer;
-    }
-
-private:
     Node* Find(Node*& current, const key_type& key) {
         if (current == nullptr) {
             ++this->sz_;
-            current = new Node(key);
+            current = alloc_.allocate(1);
+            std::allocator_traits<node_allocator>::construct(alloc_, current, key);
             return current;
         }
         if (this->cmp_(key, current->key)) {
@@ -99,23 +99,6 @@ private:
         }
     }
 
-public:
-    void Insert(const std::pair<const key_type, value_type>& val) {
-        this->operator[](val.first) = val.second;
-    }
-
-    void Insert(const std::initializer_list<std::pair<const key_type, value_type>>& values) {
-        for (auto it = values.begin(); it != values.end(); ++it) {
-            Insert(*it);
-        }
-    }
-
-    void Erase(const key_type& key) {
-        this->head_ = this->Erase(this->head_, key);
-        --this->sz_;
-    }
-
-private:
     Node* Erase(Node* p, const key_type& key) {
         if (p == nullptr) {
             throw MapIsEmptyException("You are trying to erase not existing key.");
@@ -129,17 +112,20 @@ private:
             return p;
         }
         if (p->left == nullptr and p->right == nullptr) {
-            delete p;
+            std::allocator_traits<node_allocator>::destroy(alloc_, p);
+            alloc_.deallocate(p, 1);
             return nullptr;
         }
         if (p->left == nullptr) {
             Node* t = p->right;
-            delete p;
+            std::allocator_traits<node_allocator>::destroy(alloc_, p);
+            alloc_.deallocate(p, 1);
             return t;
         }
         if (p->right == nullptr) {
             Node* t = p->left;
-            delete p;
+            std::allocator_traits<node_allocator>::destroy(alloc_, p);
+            alloc_.deallocate(p, 1);
             return t;
         }
 
@@ -157,7 +143,9 @@ private:
         } else {
             prev_max->right = nullptr;
         }
-        delete max;
+
+        std::allocator_traits<node_allocator>::destroy(alloc_, max);
+        alloc_.deallocate(max, 1);
         return p;
     }
 
@@ -179,7 +167,8 @@ public:
         ClearSubtree(root->right);
         root->right = nullptr;
 
-        delete root;
+        std::allocator_traits<node_allocator>::destroy(alloc_, root);
+        alloc_.deallocate(root, 1);
     }
 
     bool Find(const key_type& key) const {
@@ -196,6 +185,27 @@ public:
         return false;
     }
 
+    void Insert(const std::pair<const key_type, value_type>& val) {
+        this->operator[](val.first) = val.second;
+    }
+
+    void Insert(const std::initializer_list<std::pair<const key_type, value_type>>& values) {
+        for (auto it = values.begin(); it != values.end(); ++it) {
+            Insert(*it);
+        }
+    }
+
+    void Erase(const key_type& key) {
+        this->head_ = this->Erase(this->head_, key);
+        --this->sz_;
+    }
+
+    std::vector<std::pair<key_type, value_type>> Values(bool is_increase = true) const noexcept {
+        std::vector<std::pair<key_type, value_type>> answer;
+        this->InOrder(this->head_, answer, is_increase);
+        return answer;
+    }
+
     ~Map() {
         this->Clear();
     }
@@ -204,6 +214,9 @@ private:
     size_t sz_;
     Node* head_;
     Compare cmp_;
+    // NOLINTNEXTLINE
+    using node_allocator = typename std::allocator_traits<Alloc>::template rebind_alloc<Node>;
+    node_allocator alloc_;
 };
 
 namespace std {
