@@ -14,8 +14,11 @@
       ]
     }
   ],
-  "lint_files": ["map.hpp"],
-  "submit_files": ["map.hpp"],
+  "lint_files": [
+    "vector.hpp",
+    "vector.cpp"
+  ],
+  "submit_files": ["vector.hpp", "vector.cpp"],
   "forbidden": [
     {
       "patterns": [
@@ -25,15 +28,9 @@
     },
     {
       "patterns": [
-        "std::map"
+        "std::vector"
       ],
-      "hint": "Don't use std::map -> implement him"
-    },
-    {
-      "patterns": [
-        "std::sort"
-      ],
-      "hint": "Don't use std::sort -> BST doesn't need this"
+      "hint": "Don't use std::vector -> implement him"
     }
   ]
 }

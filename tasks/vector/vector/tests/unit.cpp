@@ -40,6 +40,28 @@ public:
         a = malloc(100);
     };
 
+    MemoryUseObject(const MemoryUseObject&) {
+        a = malloc(100);
+    };
+
+    MemoryUseObject(MemoryUseObject&& other) {
+        a = other.a;
+        other.a = nullptr;
+    };
+
+    MemoryUseObject& operator=(const MemoryUseObject&){
+        return *this;
+    }
+
+     MemoryUseObject& operator=(MemoryUseObject&& other){
+        if (a) {
+            free(a);
+        }
+        a = other.a;
+        other.a = nullptr;
+        return *this;
+    }
+
     ~MemoryUseObject(){
         free(a);
     }
@@ -48,6 +70,7 @@ public:
 private:
     void* a;
 };
+
 
 struct President {
     std::string name;
@@ -128,9 +151,9 @@ TEST(EmptyVectorTest, MoveOperator) {
     Vector<MemoryUseObject> vec1;
     vec1.PushBack(MemoryUseObject());
     Vector<MemoryUseObject> vec;
-    vec1 = std::move(vec);
-    ASSERT_EQ(vec1.Size(), 1);
-    ASSERT_EQ(vec.Size(), 0);
+    vec = std::move(vec1);
+    ASSERT_EQ(vec.Size(), 1);
+    ASSERT_EQ(vec1.Size(), 0);
 }
 
 TEST(EmptyVectorTest, Init_list) {
@@ -227,9 +250,6 @@ TEST(EmptyVectorTest, VoidAsTemplate) {
     vec.PushBack(malloc(1));
     vec.PushBack(malloc(1));
     vec.PushBack(malloc(1));
-    void* ptr = vec.Front();
-    ptr = vec.Back();
-    free(ptr);
 }
 
 
@@ -288,8 +308,10 @@ TEST_F(VectorTest, InsertMid) {
     for (size_t i = 0; i < vec.Size(); ++i) {
         if (i == sz / 2) {
             ASSERT_EQ(vec[i], 0);
-        } else {
+        } else if (i < sz / 2) {
             ASSERT_EQ(vec[i], i + 1);
+        } else {
+            ASSERT_EQ(vec[i], i);
         }
     }
 }
@@ -304,10 +326,12 @@ TEST_F(VectorTest, InsertWithResize) {
     vec.Insert(pos, 0);
     ASSERT_NE(cur_cap, vec.Capacity());
     for (size_t i = 0; i < vec.Size(); ++i) {
-        if (i == pos) {
+        if (i == vec.Size() / 2) {
             ASSERT_EQ(vec[i], 0);
-        } else {
+        } else if (i < vec.Size() / 2) {
             ASSERT_EQ(vec[i], i + 1);
+        } else {
+            ASSERT_EQ(vec[i], i);
         }
     }
 }
@@ -386,7 +410,7 @@ TEST_F(VectorTest, VectorResizeEqualCurrent) {
     size_t old_cap = vec.Capacity();
     size_t old_size = vec.Size();
     vec.Resize(old_size, 0); // no effect
-    ASSERT_NE(vec.Capacity(), old_cap);
+    ASSERT_EQ(vec.Capacity(), old_cap);
     ASSERT_EQ(vec.Size(), old_size);
     for (size_t i = 0; i < old_size; ++i) {
         ASSERT_EQ(vec[i], i + 1);
