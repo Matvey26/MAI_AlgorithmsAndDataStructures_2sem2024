@@ -1,86 +1,153 @@
-#include "vector.hpp"
+#include <cstdlib>
+#include <initializer_list>
+#include <memory>
+#include <utility>
 
-Vector::Vector() {
-    // Not Implemented
-}
+template <typename T, typename Alloc = std::allocator<T>>
+class Vector {
+private:
+    using allocator_type = Alloc;
+    using alloc_traits = std::allocator_traits<allocator_type>;
+    allocator_type alloc_;
 
-Vector::Vector(size_t count, const T& value) {
-    // Not Implemented
-}
+    size_t sz_;
+    size_t cap_;
+    T* arr_;
+    // using T_alloc_type = typename std::allocator_traits<allocator_type>::template rebind<T>::other;
 
-Vector::Vector(const Vector& other) {
-    // Not Implemented
-}
+public:
+    Vector() : alloc_(), sz_(0), cap_(10), arr_(alloc_.allocate(cap_)) {
+    }
 
-Vector::Vector(Vector&& other) noexcept {
-    // Not Implemented
-}
+    Vector(const allocator_type& a) : alloc_(a), sz_(0), cap_(10), arr_(alloc_.allocate(cap_)) {
+    }
 
-Vector::Vector(std::initializer_list<T> init) {
-    // Not Implemented
-}
+    Vector(size_t count, const T& value, const allocator_type& a = allocator_type())
+        : alloc_(a), sz_(count), cap_(count), arr_(alloc_.allocate(cap_)) {
+        std::uninitialized_fill_n(this->arr_, count, value);
+    }
 
-T& Vector::operator[](size_t pos) {
-    std::abort();  // Not Implemented
-}
+    Vector(const Vector& other)
+        : alloc_(other.alloc_), sz_(other.sz_), cap_(other.cap_), arr_(other.alloc_.allocate(other.cap_)) {
+        // переносим элементы и отслеживаем исключения (чтобы почистить память)
+        for (size_t i = 0; i < this->sz_; ++i) {
+            try {
+                alloc_traits::construct(alloc_, this->arr_ + i, other.arr_[i]);
+            } catch (...) {
+                for (size_t j = 0; j < i; ++j) {
+                    alloc_traits::destroy(alloc_, this->arr_ + j);
+                }
+                this->alloc_.deallocate(this->arr_, this->cap_);
+                throw;
+            }
+        }
+    }
 
-T& Vector::Front() const noexcept {
-    std::abort();  // Not Implemented
-}
+    Vector(Vector&& other) noexcept : alloc_(std::move(other.alloc_)), sz_(0), cap_(0), arr_(nullptr) {
+        std::swap(sz_, other.sz_);
+        std::swap(cap_, other.cap_);
+        std::swap(arr_, other.arr_);
+    }
 
-bool Vector::IsEmpty() const noexcept {
-    std::abort();  // Not Implemented
-}
+    Vector(std::initializer_list<T> init) {
+    }
 
-T& Vector::Back() const noexcept {
-    std::abort();  // Not Implemented
-}
+    Vector& operator=(const Vector& other);
 
-T* Vector::Data() const noexcept {
-    std::abort();  // Not Implemented
-}
+    Vector& operator=(Vector&& other);
 
-size_t Vector::Size() const noexcept {
-    std::abort();  // Not Implemented
-}
+    T& operator[](size_t pos) {
+        return this->arr_[pos];
+    }
 
-size_t Vector::Capacity() const noexcept {
-    std::abort();  // Not Implemented
-}
+    const T& operator[](size_t pos) const {
+        return this->arr_[pos];
+    }
 
-void Vector::Reserve(size_t new_cap) {
-    // Not Implemented
-}
+    T& Front() const noexcept {
+        return this->arr_[0];
+    }
 
-void Vector::Clear() noexcept {
-    // Not Implemented
-}
+    T& Back() const noexcept {
+        return this->arr_[this->sz_ - 1];
+    }
 
-void Vector::Insert(size_t pos, T value) {
-    // Not Implemented
-}
+    T* Data() const noexcept {
+        return this->arr_;
+    }
 
-void Vector::Erase(size_t begin_pos, size_t end_pos) {
-    // Not Implemented
-}
+    bool IsEmpty() const noexcept {
+        return this->sz_ == 0;
+    }
 
-void Vector::PushBack(T value) {
-    // Not Implemented
-}
+    size_t Size() const noexcept {
+        return this->sz_;
+    }
 
-template <class... Args>
-void Vector::EmplaceBack(Args&&... args) {
-    // Not Implemented
-}
+    size_t Capacity() const noexcept {
+        return this->cap_;
+    }
 
-void Vector::PopBack() {
-    // Not Implemented
-}
+    void Reserve(size_t new_cap) {
+        if (new_cap <= this->cap_) {
+            return;
+        }
 
-void Vector::Resize(size_t count, const T& value) {
-    // Not Implemented
-}
+        // выделяем память для нового массива
+        T* new_arr = alloc_.allocate(new_cap);
 
-Vector::~Vector() {
-    // Not Implemented
-}
+        // переносим элементы и отслеживаем исключения (чтобы почистить память)
+        for (size_t i = 0; i < this->sz_; ++i) {
+            try {
+                alloc_traits::construct(alloc_, new_arr + i, std::move(this->arr_[i]));
+            } catch (...) {
+                for (size_t j = 0; j < i; ++j) {
+                    alloc_traits::destroy(alloc_, new_arr + j);
+                }
+                this->alloc_.deallocate(new_arr, new_cap);
+                throw;
+            }
+        }
+        for (size_t i = 0; i < this->sz_; ++i) {
+            alloc_traits::destroy(alloc_, &this->arr_[i]);
+        }
+
+        this->alloc_.deallocate(this->arr_, this->cap_);
+        this->cap_ = new_cap;
+        this->arr_ = new_arr;
+    }
+
+    void Clear() noexcept {
+        while (!this->IsEmpty()) {
+            this->PopBack();
+        }
+    }
+
+    void Insert(size_t pos, T value);
+
+    void Erase(size_t begin_pos, size_t end_pos);
+
+    void PushBack(T value) {
+        // TODO: exception safety
+        if (this->sz_ >= this->cap_) {
+            this->Reserve(2 * this->cap_);
+        }
+        new (this->arr_ + this->sz_) T(value);  // TODO: использовать аллокаторы
+        ++this->sz_;
+    }
+
+    template <class... Args>
+    void EmplaceBack(Args&&... args);
+
+    void PopBack() {
+        --this->sz_;
+        alloc_traits::destroy(alloc_, &this->arr_[sz_]);
+    }
+
+    void Resize(size_t count, const T& value);
+
+    ~Vector() {
+        this->Clear();
+        this->alloc_.deallocate(this->arr_, this->cap_);
+    }
+};
