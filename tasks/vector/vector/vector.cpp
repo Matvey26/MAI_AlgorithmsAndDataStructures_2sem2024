@@ -163,10 +163,12 @@ public:
     }
 
     void Erase(size_t begin_pos, size_t end_pos) {
+        begin_pos = std::max(0ul, std::min(this->sz_, begin_pos));
+        end_pos = std::max(0ul, std::min(this->sz_, end_pos));
         for (size_t i = begin_pos; i < end_pos; ++i) {
             alloc_traits::destroy(this->alloc_, this->arr_ + i);
         }
-        for (size_t i = 0; i < this->sz_ - (end_pos - begin_pos); ++i) {
+        for (size_t i = 0; i < this->sz_ - end_pos; ++i) {
             alloc_traits::construct(alloc_, this->arr_ + begin_pos + i, this->arr_[end_pos + i]);
             alloc_traits::destroy(alloc_, this->arr_ + end_pos + i);
         }
@@ -245,6 +247,8 @@ private:
     T* arr_;
 
 public:
+    Vector() : sz_(0), cap_(0), arr_(nullptr) {
+    }
     void PushBack(T value) {
         this->CheckCapacity();
         this->arr_[this->sz_] = value;
