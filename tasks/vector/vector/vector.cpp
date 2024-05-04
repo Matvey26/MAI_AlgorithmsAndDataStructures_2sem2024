@@ -28,7 +28,7 @@ public:
     }
 
     explicit Vector(size_t count, const allocator_type& a = allocator_type())
-        : alloc_(a), sz_(0), cap_((count > MIN_CAP ? count : MIN_CAP)), arr_(alloc_.allocate(cap_)) {
+        : alloc_(a), sz_(0), cap_(std::max(count, MIN_CAP)), arr_(alloc_.allocate(cap_)) {
     }
 
     Vector(size_t count, const T& value, const allocator_type& a = allocator_type()) : Vector(count, a) {
@@ -60,7 +60,7 @@ public:
         this->sz_ = init.size();
         auto it = init.begin();
         for (size_t i = 0; i < this->sz_; ++i) {
-            this->arr_[i] = std::move(*it);
+            alloc_traits::construct(this->alloc_, this->arr_ + i, std::move(*it));
             ++it;
         }
     }
@@ -169,7 +169,7 @@ public:
             alloc_traits::destroy(this->alloc_, this->arr_ + i);
         }
         for (size_t i = 0; i < this->sz_ - end_pos; ++i) {
-            alloc_traits::construct(alloc_, this->arr_ + begin_pos + i, this->arr_[end_pos + i]);
+            alloc_traits::construct(alloc_, this->arr_ + begin_pos + i, std::move_if_noexcept(this->arr_[end_pos + i]));
             alloc_traits::destroy(alloc_, this->arr_ + end_pos + i);
         }
         this->sz_ -= end_pos - begin_pos;
@@ -214,15 +214,15 @@ public:
     }
 
     void Swap(Vector<T>& other) {
-        std::swap(sz_, other.sz_);
-        std::swap(cap_, other.cap_);
-        std::swap(arr_, other.arr_);
+        std::swap(this->sz_, other.sz_);
+        std::swap(this->cap_, other.cap_);
+        std::swap(this->arr_, other.arr_);
     }
 
     void Swap(Vector<T>&& other) {
-        std::swap(sz_, other.sz_);
-        std::swap(cap_, other.cap_);
-        std::swap(arr_, other.arr_);
+        std::swap(this->sz_, other.sz_);
+        std::swap(this->cap_, other.cap_);
+        std::swap(this->arr_, other.arr_);
     }
 
 private:
@@ -246,6 +246,9 @@ private:
     size_t sz_;
     size_t cap_;
     T* arr_;
+    // NOLINTNEXTLINE
+    using alloc_traits = std::allocator_traits<std::allocator<T>>;
+    std::allocator<T> alloc_;
 
 public:
     Vector() : sz_(0), cap_(0), arr_(nullptr) {
@@ -261,17 +264,16 @@ public:
             return;
         }
 
-        T* new_arr = static_cast<T*>(malloc(new_cap * sizeof(T)));
+        T* new_arr = this->alloc_.allocate(new_cap);
 
         for (size_t i = 0; i < this->sz_; ++i) {
-            new (new_arr + i) T(this->arr_[i]);
+            alloc_traits::construct(this->alloc_, new_arr + i, std::move(this->arr_[i]));
         }
         for (size_t i = this->sz_; i < new_cap; ++i) {
-            new (new_arr + i) T(nullptr);
+            alloc_traits::construct(this->alloc_, new_arr + i, nullptr);
         }
 
-        // alloc_.deallocate(this->arr_, this->cap_ * sizeof(void*));
-        operator delete(this->arr_, this->cap_);
+        this->alloc_.deallocate(this->arr_, this->cap_);
         this->cap_ = new_cap;
         this->arr_ = new_arr;
     }
@@ -290,6 +292,6 @@ public:
                 free(this->arr_[i]);
             }
         }
-        free(this->arr_);
+        this->alloc_.deallocate(this->arr_, this->cap_);
     }
 };
