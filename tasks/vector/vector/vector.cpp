@@ -206,6 +206,7 @@ public:
             }
             this->sz_ = count;
         } else {
+            count -= this->sz_;
             for (size_t i = 0; i < count; ++i) {
                 this->PushBack(value);
             }
