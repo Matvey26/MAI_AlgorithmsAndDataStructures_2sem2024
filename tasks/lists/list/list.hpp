@@ -1,172 +1,255 @@
 #pragma once
 
-#include <cstdlib>
-#include <cstddef>
-#include <iterator>
-#include <functional>
-#include <utility>
-
 #include <fmt/core.h>
 
+#include <cstddef>
+#include <cstdlib>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <utility>
+
+#include "exceptions.hpp"
+
 template <typename T>
-class List{
+class List {
 private:
-  class Node{
-    friend class ListIterator;
-    friend class List;
-    /*???*/
+    struct NodeBase {
+        NodeBase* next_;
+        NodeBase* prev_;
+    };
+
+    struct Node : public NodeBase {
+        T data_;
+
+        explicit Node(const T& value) : data_(value) {
+        }
+    };
+
+private:
+    template <bool IsConst>
+    class BaseIterator {
+        friend List;
+
+    public:
+        // NOLINTNEXTLINE
+        using basenode_ptr_type = std::conditional_t<IsConst, const NodeBase*, NodeBase*>;
+        // NOLINTNEXTLINE
+        using node_ptr_type = std::conditional_t<IsConst, const Node*, Node*>;
+        // NOLINTNEXTLINE
+        using value_type = T;
+        // NOLINTNEXTLINE
+        using reference_type = std::conditional_t<IsConst, const T&, T&>;
+        // NOLINTNEXTLINE
+        using pointer_type = std::conditional_t<IsConst, const T*, T*>;
+        // NOLINTNEXTLINE
+        using difference_type = std::ptrdiff_t;
+        // NOLINTNEXTLINE
+        using iterator_category = std::bidirectional_iterator_tag;
+
+        inline bool operator==(const BaseIterator& other) const {
+            return this->current_ == other.current_;
+        };
+
+        inline bool operator!=(const BaseIterator& other) const {
+            return this->current_ != other.current_;
+        };
+
+        inline reference_type operator*() const {
+            return static_cast<node_ptr_type>(this->current_)->data_;
+        };
+
+        BaseIterator& operator++() noexcept {
+            this->current_ = this->current_->next_;
+            return *this;
+        };
+
+        BaseIterator operator++(int) noexcept {
+            BaseIterator temp = *this;
+            this->current_ = this->current_->next_;
+            return temp;
+        };
+
+        BaseIterator& operator--() {
+            this->current_ = this->current_->prev_;
+            return *this;
+        };
+
+        BaseIterator operator--(int) {
+            BaseIterator temp = *this;
+            this->current_ = this->current_->prev_;
+            return temp;
+        };
+
+        inline pointer_type operator->() const {
+            return &static_cast<node_ptr_type>(this->current_)->data_;
+        };
 
     private:
-      /*???*/
+        BaseIterator() noexcept : current_() {
+        }
+        explicit BaseIterator(basenode_ptr_type node) noexcept : current_(node) {
+        }
 
-  };
-
-public:
-  class ListIterator{
-    public:
-      using value_type = T;
-      using reference_type = value_type&;
-      using pointer_type = value_type*;
-      using difference_type = std::ptrdiff_t;
-      using iterator_category = std::bidirectional_iterator_tag;
-
-      inline bool operator==(const ListIterator&) const {
-          std::abort(); // Not implemented
-      };
-
-      inline bool operator!=(const ListIterator&) const {
-          std::abort(); // Not implemented
-      };
-
-      inline reference_type operator*() const {
-          std::abort(); // Not implemented
-      };
-
-      ListIterator& operator++() {
-          std::abort(); // Not implemented
-      };
-
-      ListIterator operator++(int) {
-          std::abort(); // Not implemented
-      };
-
-      ListIterator& operator--() {
-          std::abort(); // Not implemented
-      };
-
-      ListIterator operator--(int) {
-          std::abort(); // Not implemented
-      };
-
-      /*The overload of operator -> must either return a raw pointer, 
-      or return an object (by reference or by value) for which 
-      operator -> is in turn overloaded.*/
-      inline pointer_type operator->() const {
-          std::abort(); // Not implemented
-      };
-
-  private:
-      ListIterator(const Node*) {
-          // Not implemented
-      }
-  private:
-      Node* current;
-  };
+    private:
+        basenode_ptr_type current_;
+    };
 
 public:
-  List() {
-    // Not implemented
-  }
+    using Iterator = BaseIterator<false>;
+    using ConstIterator = BaseIterator<true>;
 
-  explicit List(size_t /*sz*/) {
-    // Not implemented
-  }
+public:
+    List() : sz_(0) {
+        this->head_.next_ = this->head_.prev_ = &this->head_;
+    }
 
-  List(const std::initializer_list<T>& /*values*/) {
-    // Not implemented
-  }
+    explicit List(size_t sz) : List() {
+        while (sz--) {
+            this->PushBack(T());
+        }
+    }
 
-  List(const List& /*other*/) {
-    // Not implemented
-  }
+    List(const std::initializer_list<T>& values) : List() {
+        for (auto value : values) {
+            this->PushBack(value);
+        }
+    }
 
-  List& operator=(const List& /*other*/) {
-    std::abort(); // Not implemented
-  }
+    List(const List& other) : List() {
+        for (auto it = other.Begin(); it != other.End(); ++it) {
+            this->PushBack(*it);
+        }
+    }
 
-  ListIterator Begin() const noexcept {
-    std::abort(); // Not implemented
-  }
+    List& operator=(const List& other) {
+        if (this != &other) {
+            List copy = other;
+            this->Swap(copy);
+        }
+        return *this;
+    }
 
-  ListIterator End() const noexcept {
-    std::abort(); // Not implemented
-  }
+    Iterator Begin() noexcept {
+        return Iterator(this->head_.next_);
+    }
 
-  inline T& Front() const {
-    std::abort(); // Not implemented
-  }
+    Iterator End() noexcept {
+        return Iterator(&this->head_);
+    }
 
-  inline T& Back() const {
-    std::abort(); // Not implemented
-  }
+    // Нужны для константых списков
+    ConstIterator Begin() const noexcept {
+        return ConstIterator(this->head_.next_);
+    }
 
-  inline bool IsEmpty() const noexcept {
-    std::abort(); // Not implemented
-  }
+    ConstIterator End() const noexcept {
+        return ConstIterator(&this->head_);
+    }
 
-  inline size_t Size() const noexcept {
-    std::abort(); // Not implemented
-  }
+    inline T& Front() const {
+        return static_cast<Node*>(this->head_.next_)->data_;
+    }
 
-  void Swap(List& /*a*/) {
-    // Not implemented
-  }
+    inline T& Back() const {
+        return static_cast<Node*>(this->head_.prev_)->data_;
+    }
 
-  ListIterator Find(const T& /*value*/) const {
-    std::abort(); // Not implemented
-  }
+    inline bool IsEmpty() const noexcept {
+        return this->sz_ == 0;
+    }
 
-  void Erase(ListIterator /*pos*/) {
-    // Not implemented
-  }
+    inline size_t Size() const noexcept {
+        return this->sz_;
+    }
 
-  void Insert(ListIterator /*pos*/, const T& /*value*/) {
-    // Not implemented
-  }
+    void Swap(List& other) {
+        std::swap(this->head_.prev_, other.head_.prev_);
+        std::swap(this->head_.next_, other.head_.next_);
+        std::swap(this->sz_, other.sz_);
 
-  void Clear() noexcept {
-    // Not implemented
-  }
+        if (this->sz_ == 0) {
+            this->head_.next_ = this->head_.prev_ = &this->head_;
+        } else {
+            this->head_.next_->prev_ = this->head_.prev_->next_ = &head_;
+        }
 
-  void PushBack(const T& /*value*/) {
-    // Not implemented
-  }
+        if (other.sz_ == 0) {
+            other.head_.next_ = other.head_.prev_ = &other.head_;
+        } else {
+            other.head_.next_->prev_ = other.head_.prev_->next_ = &other.head_;
+        }
+    }
 
-  void PushFront(const T& /*value*/) {
-    // Not implemented
-  }
+    Iterator Find(const T& value) {
+        auto it = this->Begin();
+        for (; it != this->End(); ++it) {
+            if (*it == value) {
+                break;
+            }
+        }
+        return it;
+    }
 
-  void PopBack() {
-    // Not implemented
-  }
+    void Erase(Iterator pos) {
+        Node* node_to_del = static_cast<Node*>(pos.current_);
+        pos.current_->prev_->next_ = pos.current_->next_;
+        pos.current_->next_->prev_ = pos.current_->prev_;
+        --this->sz_;
+        delete node_to_del;
+    }
 
-  void PopFront() {
-    // Not implemented
-  }
+    void Insert(Iterator pos, const T& value) {
+        Node* node_to_add = new Node(value);
+        node_to_add->next_ = pos.current_;
+        node_to_add->prev_ = pos.current_->prev_;
+        pos.current_->prev_->next_ = static_cast<NodeBase*>(node_to_add);
+        pos.current_->prev_ = static_cast<NodeBase*>(node_to_add);
+        ++this->sz_;
+    }
 
-  ~List() {
-    // Not implemented
-  }
+    void Clear() noexcept {
+        while (this->sz_) {
+            this->PopBack();
+        }
+    }
+
+    void PushBack(const T& value) {
+        this->Insert(this->End(), value);
+    }
+
+    void PushFront(const T& value) {
+        this->Insert(this->Begin(), value);
+    }
+
+    void PopBack() {
+        if (this->IsEmpty()) {
+            throw ListIsEmptyException("List is empty, you can't delete last element from him");
+        }
+        this->Erase(Iterator(this->head_.prev_));
+    }
+
+    void PopFront() {
+        if (this->IsEmpty()) {
+            throw ListIsEmptyException("List is empty, you can't delete first element from him");
+        }
+        this->Erase(this->Begin());
+    }
+
+    ~List() {
+        this->Clear();
+    }
 
 private:
-  /*???*/
+    size_t sz_;
+    NodeBase head_;
 };
 
-
 namespace std {
-  // Global swap overloading
-  template <typename T>
-  void swap(List<T>& a, List<T>& b) {
+// Global swap overloading
+template <typename T>
+// NOLINTNEXTLINE
+void swap(List<T>& a, List<T>& b) {
     a.Swap(b);
-  }
 }
+}  // namespace std
